@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>첫날 — 알바 온보딩 AI 매니저</title>
+<style>
+  :root{
+    --bg:#FBF7F0;          /* 우유거품 크림 */
+    --surface:#FFFFFF;
+    --ink:#2B2622;         /* 진한 원두 */
+    --ink-soft:#6F6459;
+    --line:#EAE1D4;
+    --brand:#3E6B4F;       /* 침착한 딥그린 */
+    --brand-soft:#EAF1EB;
+    --accent:#C9683D;      /* 로스팅 오렌지 (경고/긴급) */
+    --accent-soft:#FBEBE2;
+    --owner:#7A5C9E;       /* 사장 모드 보라 */
+    --owner-soft:#F0EBF5;
+    --shadow:0 10px 40px rgba(43,38,34,.10);
+    --r:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+    background:
+      radial-gradient(1200px 500px at 100% -10%, #F3ECE0 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;line-height:1.5;
+  }
+
+  /* ── 폰 프레임 ── */
+  .phone{
+    width:390px;height:800px;max-height:92vh;
+    background:var(--surface);
+    border-radius:38px;
+    box-shadow:var(--shadow), 0 0 0 10px #17130F, 0 0 0 12px #2B2622;
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:150px;height:26px;background:#17130F;border-radius:0 0 16px 16px;z-index:60}
+
+  /* ── 상단바 ── */
+  .topbar{
+    padding:26px 18px 14px;display:flex;align-items:center;gap:12px;
+    border-bottom:1px solid var(--line);background:var(--surface);z-index:20;
+  }
+  .hamburger{width:38px;height:38px;border:none;background:var(--brand-soft);
+    border-radius:12px;cursor:pointer;display:grid;place-items:center;flex:none}
+  .hamburger span,.hamburger span::before,.hamburger span::after{
+    content:"";display:block;width:16px;height:2px;background:var(--brand);border-radius:2px;position:relative}
+  .hamburger span::before{position:absolute;top:-5px}
+  .hamburger span::after{position:absolute;top:5px}
+  .brand{display:flex;flex-direction:column}
+  .brand b{font-size:16px;letter-spacing:-.02em}
+  .brand small{font-size:11px;color:var(--ink-soft)}
+  .brand .dot{color:var(--brand)}
+
+  /* ── 사이드 메뉴 ── */
+  .scrim{position:absolute;inset:0;background:rgba(23,19,15,.38);opacity:0;
+    pointer-events:none;transition:.25s;z-index:40}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .drawer{position:absolute;top:0;left:0;bottom:0;width:270px;background:var(--surface);
+    transform:translateX(-100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    z-index:50;box-shadow:12px 0 40px rgba(43,38,34,.14);display:flex;flex-direction:column;
+    padding:64px 14px 18px}
+  .drawer.on{transform:none}
+  .drawer h3{font-size:11px;text-transform:uppercase;letter-spacing:.12em;
+    color:var(--ink-soft);margin:6px 12px 12px}
+  .navitem{display:flex;gap:12px;align-items:flex-start;padding:14px 12px;border-radius:14px;
+    cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:.15s}
+  .navitem:hover{background:var(--brand-soft)}
+  .navitem.active{background:var(--brand-soft)}
+  .navitem .ico{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:var(--surface);border:1px solid var(--line)}
+  .navitem b{font-size:14.5px;letter-spacing:-.01em;display:block}
+  .navitem small{font-size:11.5px;color:var(--ink-soft);display:block;margin-top:2px;line-height:1.35}
+
+  /* ── 화면 공통 ── */
+  .stage{flex:1;overflow-y:auto;position:relative;background:var(--bg)}
+  .screen{display:none;min-height:100%}
+  .screen.on{display:block}
+  .pad{padding:18px 16px 24px}
+  .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--brand);font-weight:700}
+  .h1{font-size:21px;letter-spacing:-.02em;margin:6px 0 4px}
+  .sub{font-size:13px;color:var(--ink-soft);margin-bottom:16px}
+
+  /* ── 지침서(문서 카드) ── */
+  .doc{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    padding:16px;margin-bottom:12px}
+  .doc .dtag{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--brand);
+    background:var(--brand-soft);display:inline-block;padding:3px 9px;border-radius:99px;margin-bottom:10px}
+  .doc h4{font-size:15.5px;letter-spacing:-.01em;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .doc ol{margin:4px 0 0 18px;font-size:13px;color:var(--ink-soft)}
+  .doc ol li{margin:5px 0}
+  .doc.warn{border-color:#EAD3C6;background:linear-gradient(0deg,var(--accent-soft),var(--surface))}
+  .doc.warn .dtag{color:var(--accent);background:var(--accent-soft)}
+  .chip{font-size:10px;font-weight:700;color:var(--accent);border:1px solid #E7C3B2;
+    padding:2px 8px;border-radius:99px}
+
+  /* ── 인수인계 로드맵 ── */
+  .road{position:relative;margin-left:8px;padding-left:22px}
+  .road::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .step{position:relative;margin-bottom:16px}
+  .step::before{content:"";position:absolute;left:-22px;top:3px;width:14px;height:14px;border-radius:50%;
+    background:var(--surface);border:3px solid var(--brand)}
+  .step.done::before{background:var(--brand)}
+  .step .day{font-size:11px;font-weight:700;color:var(--brand);letter-spacing:.04em}
+  .step h4{font-size:14.5px;margin:2px 0 6px;letter-spacing:-.01em}
+  .step p{font-size:12.5px;color:var(--ink-soft)}
+  .tip{font-size:12px;background:var(--owner-soft);color:#4A3A63;border-radius:12px;
+    padding:10px 12px;margin-top:8px;border:1px solid #E3D7EF}
+  .tip b{color:var(--owner)}
+
+  /* ── 채팅 ── */
+  .modebar{display:flex;gap:8px;padding:12px 16px 4px;background:var(--bg);position:sticky;top:0;z-index:5}
+  .modebtn{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:12px;
+    padding:10px 8px;cursor:pointer;text-align:center;transition:.15s}
+  .modebtn b{font-size:12.5px;letter-spacing:-.01em;display:block}
+  .modebtn small{font-size:10.5px;color:var(--ink-soft)}
+  .modebtn.active[data-mode="ask"]{border-color:var(--brand);background:var(--brand-soft)}
+  .modebtn.active[data-mode="ask"] b{color:var(--brand)}
+  .modebtn.active[data-mode="teach"]{border-color:var(--owner);background:var(--owner-soft)}
+  .modebtn.active[data-mode="teach"] b{color:var(--owner)}
+
+  .thread{padding:14px 16px 8px;display:none;flex-direction:column;gap:10px}
+  .thread.on{display:flex}
+  .msg{max-width:80%;padding:11px 14px;border-radius:16px;font-size:13.5px;line-height:1.5}
+  .msg.bot{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px;align-self:flex-start}
+  .msg.me{background:var(--brand);color:#fff;border-bottom-right-radius:5px;align-self:flex-end}
+  .thread.teach .msg.me{background:var(--owner)}
+  .who{font-size:10.5px;color:var(--ink-soft);margin:2px 4px -2px;align-self:flex-start}
+  .who.me{align-self:flex-end}
+  .msg .lead{font-weight:700;margin-bottom:3px;font-size:13px}
+  .msg ol{margin:4px 0 0 16px}
+  .msg ol li{margin:3px 0}
+  .flag{margin-top:8px;font-size:11.5px;background:var(--accent-soft);color:#8A3E1C;
+    border:1px solid #EBCBBB;border-radius:10px;padding:8px 10px;align-self:flex-start;max-width:88%}
+  .flag b{color:var(--accent)}
+  .savednote{font-size:11.5px;background:var(--owner-soft);color:#4A3A63;border:1px solid #E3D7EF;
+    border-radius:10px;padding:8px 10px;align-self:flex-start;max-width:88%}
+
+  /* 입력창 */
+  .composer{padding:10px 12px 16px;border-top:1px solid var(--line);background:var(--surface);
+    display:flex;gap:8px;align-items:center}
+  .composer input{flex:1;border:1px solid var(--line);border-radius:99px;padding:11px 15px;
+    font-size:13.5px;font-family:inherit;background:var(--bg);outline:none}
+  .composer input:focus{border-color:var(--brand)}
+  .send{width:40px;height:40px;border:none;border-radius:50%;background:var(--brand);color:#fff;
+    cursor:pointer;font-size:16px;flex:none}
+  .composer.teach input:focus{border-color:var(--owner)}
+  .composer.teach .send{background:var(--owner)}
+  .hint{font-size:10.5px;color:var(--ink-soft);text-align:center;padding:0 16px 10px;background:var(--surface)}
+
+  /* 채팅 안의 가이드 열기 버튼 */
+  .guidebtn{margin-top:10px;width:100%;border:none;background:var(--brand);color:#fff;
+    border-radius:12px;padding:11px 14px;font-size:13.5px;font-weight:700;font-family:inherit;
+    cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+  .guidebtn .arr{font-size:18px}
+
+  /* 시각 가이드 오버레이 (풀스크린 슬라이드업) */
+  .guide{position:absolute;inset:0;background:var(--bg);z-index:70;transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.2,.8,.2,1);overflow-y:auto}
+  .guide.on{transform:none}
+  .guide-top{position:sticky;top:0;background:var(--bg);padding:24px 16px 10px;z-index:2}
+  .gback{border:none;background:none;color:var(--brand);font-size:14px;font-weight:600;
+    cursor:pointer;display:flex;align-items:center;gap:5px;padding:6px 0}
+  .guide h2{font-size:20px;letter-spacing:-.02em;margin:8px 16px 2px}
+  .guide .gsub{font-size:12.5px;color:var(--ink-soft);margin:0 16px 14px}
+  .gcallout{margin:0 16px 18px;background:var(--brand-soft);border:1px solid #D6E4D9;border-radius:13px;
+    padding:11px 13px;font-size:12.5px;color:#2E5540;display:flex;gap:8px}
+  .gcallout b{color:var(--brand)}
+
+  .gstep{background:var(--surface);border:1px solid var(--line);border-radius:18px;
+    overflow:hidden;margin:0 14px 16px;box-shadow:0 4px 16px rgba(43,38,34,.05)}
+  .gstep-hd{display:flex;align-items:center;gap:10px;padding:13px 14px 10px}
+  .gnum{width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;
+    font-size:14px;font-weight:700;display:grid;place-items:center;flex:none}
+  .gstep-hd .gt{font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+  .gstep-hd .gloc{font-size:11px;color:var(--ink-soft)}
+  .simg{margin:0 10px;border-radius:11px;overflow:hidden;border:1px solid #0d141c;line-height:0}
+  .simg svg{width:100%;height:auto;display:block}
+  .gcta{margin:11px 10px;background:#FCEAE9;border:1.5px solid #F3C4C1;border-radius:11px;
+    padding:11px 13px;display:flex;align-items:center;gap:9px}
+  .gcta .tap{width:24px;height:24px;border-radius:7px;background:var(--mark,#E4322B);flex:none;
+    display:grid;place-items:center;color:#fff;font-size:13px}
+  .gcta b{font-size:14.5px;letter-spacing:-.01em;color:#B21F1A}
+  .gdone{margin:0 14px 22px;background:var(--brand);color:#fff;text-align:center;padding:15px;
+    border-radius:15px;font-size:14.5px;font-weight:700}
+  .gdone small{display:block;font-weight:400;font-size:11.5px;opacity:.85;margin-top:3px}
+</style>
+<style>:root{--mark:#E4322B}</style>
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+
+  <!-- 상단바 -->
+  <div class="topbar">
+    <button class="hamburger" onclick="openDrawer()" aria-label="메뉴 열기"><span></span></button>
+    <div class="brand">
+      <b>첫날<span class="dot">.</span></b>
+      <small>알바 온보딩 AI 매니저</small>
+    </div>
+  </div>
+
+  <!-- 사이드 메뉴 -->
+  <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+  <nav class="drawer" id="drawer">
+    <h3>메뉴</h3>
+    <button class="navitem active" onclick="go('chat',this)">
+      <span class="ico">💬</span>
+      <span><b>채팅</b><small>모르는 걸 묻거나, 가게 정보를 입력해요</small></span>
+    </button>
+    <button class="navitem" onclick="go('guide',this)">
+      <span class="ico">📔</span>
+      <span><b>알바생 지침서</b><small>정리된 업무 문서 모음</small></span>
+    </button>
+    <button class="navitem" onclick="go('road',this)">
+      <span class="ico">🗺️</span>
+      <span><b>사장님 인수인계 가이드</b><small>무엇을 언제 가르칠지 로드맵</small></span>
+    </button>
+  </nav>
+
+  <!-- 화면들 -->
+  <div class="stage">
+
+    <!-- 1) 채팅 -->
+    <section class="screen on" id="chat">
+      <div class="modebar">
+        <button class="modebtn active" data-mode="ask" onclick="setMode('ask',this)">
+          <b>알려주는 채팅</b><small>알바생이 질문</small>
+        </button>
+        <button class="modebtn" data-mode="teach" onclick="setMode('teach',this)">
+          <b>정보 입력 채팅</b><small>사장님이 인수인계</small>
+        </button>
+      </div>
+
+      <!-- 알바생: 질문 스레드 -->
+      <div class="thread ask on" id="thread-ask">
+        <span class="who">첫날 매니저</span>
+        <div class="msg bot">안녕하세요! 첫 출근 축하해요 ☕ 일하다 막히는 게 있으면 언제든 편하게 물어보세요. 사장님께 직접 안 물어봐도 돼요.</div>
+
+        <span class="who me">나 (알바생)</span>
+        <div class="msg me">손님이 환불해달래요. 포스기에서 환불 어떻게 해요?</div>
+
+        <span class="who">첫날 매니저</span>
+        <div class="msg bot">
+          <div class="lead">포스기 환불이죠? 화면으로 알려줄게요 👇</div>
+          손님을 기다리게 하지 마세요. 빨간 박스만 순서대로 누르면 3단계로 끝나요.
+          <button class="guidebtn" onclick="openGuide()">
+            <span>📱 화면 따라하기 가이드</span><span class="arr">›</span>
+          </button>
+        </div>
+
+        <span class="who me">나 (알바생)</span>
+        <div class="msg me">여분 컵은 어디 있어요?</div>
+        <span class="who">첫날 매니저</span>
+        <div class="msg bot">카운터 아래 <b>두 번째 서랍</b>에 있어요. 다 쓰면 창고 왼쪽 선반에서 보충하면 돼요.</div>
+
+        <span class="who me">나 (알바생)</span>
+        <div class="msg me">물 쏟아서 포스기 전원이 나갔어요 ㅠㅠ</div>
+        <div class="msg bot">
+          <div class="lead">침착하게 따라 해요 🙂</div>
+          <ol>
+            <li>젖었으면 <b>전원 코드를 먼저 뽑아요</b> (감전 주의)</li>
+            <li>마른 수건으로 겉면을 닦아요</li>
+            <li>이건 가게마다 대응이 달라서, 사장님께 확인 중이에요 ↓</li>
+          </ol>
+        </div>
+        <div class="flag">⚠️ <b>지침서에 없는 상황</b>이에요. 일반 대응을 먼저 안내했고, 이 질문을 <b>사장님께 전달</b>했어요. 답이 오면 지침서에 자동 저장돼요.</div>
+      </div>
+
+      <!-- 사장: 정보 입력 스레드 -->
+      <div class="thread teach" id="thread-teach">
+        <span class="who">첫날 매니저</span>
+        <div class="msg bot">사장님, 저를 첫날 알바라고 생각하고 알려주세요. 제가 모르는 건 계속 되물으면서 정리해드릴게요 ✍️</div>
+
+        <span class="who me">나 (사장님)</span>
+        <div class="msg me">마감은 밤 10시야.</div>
+
+        <span class="who">첫날 매니저</span>
+        <div class="msg bot">
+          <div class="lead">좋아요, 조금만 더 자세히요 🙂</div>
+          마감 <b>순서</b>가 궁금해요. 10시가 되면 무엇부터 하나요? (예: 주문 마감 → 기기 청소 → 정산 → 소등)
+        </div>
+
+        <span class="who me">나 (사장님)</span>
+        <div class="msg me">주문 막고, 머신 청소하고, 돈 세고, 불 끄고 문 잠가.</div>
+
+        <div class="savednote">📔 <b>지침서에 저장됨</b> · "마감 절차" 항목이 새로 만들어졌어요. 알바생 지침서에서 바로 볼 수 있어요.</div>
+
+        <div class="msg bot">
+          <div class="lead">하나 더요 — 자주 놓치는 부분이에요</div>
+          다른 카페 사장님들은 이때 <b>"현금 시재 확인"</b>과 <b>"CCTV 확인"</b>도 알려주시더라고요. 우리 가게도 필요할까요?
+        </div>
+      </div>
+
+      <div class="hint" id="hint">알바생 모드예요 · 궁금한 걸 그냥 편하게 쓰면 돼요</div>
+      <div class="composer" id="composer">
+        <input id="chatinput" placeholder="여기에 메시지를 입력…" />
+        <button class="send" onclick="fakeSend()">↑</button>
+      </div>
+    </section>
+
+    <!-- 2) 알바생 지침서 -->
+    <section class="screen" id="guide">
+      <div class="pad">
+        <div class="eyebrow">알바생 지침서</div>
+        <h1 class="h1">정리된 업무 문서</h1>
+        <p class="sub">사장님이 알려준 내용이 문서로 쌓여요. 헷갈리면 여기서 찾아보세요.</p>
+
+        <div class="doc">
+          <span class="dtag">마감</span>
+          <h4>마감 절차 <span style="font-size:11px;color:var(--ink-soft)">밤 10:00</span></h4>
+          <ol>
+            <li>신규 주문 마감</li>
+            <li>커피 머신·그라인더 청소</li>
+            <li>현금 시재 확인 및 정산</li>
+            <li>소등 후 문단속</li>
+          </ol>
+        </div>
+
+        <div class="doc">
+          <span class="dtag">결제</span>
+          <h4>포스기 환불</h4>
+          <ol>
+            <li>설정 → 결제취소</li>
+            <li>해당 주문 선택</li>
+            <li>카드 재삽입 후 승인</li>
+            <li>영수증 전달</li>
+          </ol>
+        </div>
+
+        <div class="doc">
+          <span class="dtag">비품</span>
+          <h4>물건 위치</h4>
+          <ol>
+            <li>여분 컵 — 카운터 아래 2번째 서랍</li>
+            <li>빨대·냅킨 — 픽업대 하단</li>
+            <li>보충 재고 — 창고 왼쪽 선반</li>
+          </ol>
+        </div>
+
+        <div class="doc warn">
+          <span class="dtag">긴급 · 확인 중</span>
+          <h4>포스기 전원 문제 <span class="chip">사장님 답변 대기</span></h4>
+          <ol>
+            <li>전원 코드 뽑기 (감전 주의)</li>
+            <li>겉면 물기 제거</li>
+            <li>가게별 대응은 사장님 확인 후 업데이트 예정</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3) 사장님 인수인계 가이드 -->
+    <section class="screen" id="road">
+      <div class="pad">
+        <div class="eyebrow">사장님용</div>
+        <h1 class="h1">인수인계 가이드</h1>
+        <p class="sub">한 번에 다 쏟아내면 알바생이 못 따라와요. 며칠에 나눠 가르치도록 로드맵을 짰어요.</p>
+
+        <div class="road">
+          <div class="step done">
+            <div class="day">1일차 · 기본기</div>
+            <h4>가게 한 바퀴 + 안전</h4>
+            <p>물건 위치, 화장실·창고, 소화기 위치, 비상 연락처. "손으로 직접 짚어주며" 안내하기.</p>
+            <div class="tip"><b>팁</b> · 첫날은 정보량을 줄이세요. 위치와 안전만 확실히.</div>
+          </div>
+          <div class="step done">
+            <div class="day">2일차 · 주문/결제</div>
+            <h4>포스기와 환불</h4>
+            <p>주문 입력, 카드/현금 결제, 환불 절차. 한 번은 <b>직접 시켜보기</b>.</p>
+          </div>
+          <div class="step">
+            <div class="day">3일차 · 돌발 상황</div>
+            <h4>"이럴 땐 어떻게?"</h4>
+            <p>진상 손님, 기기 고장, 재고 소진. 시나리오로 미리 답을 정해두면 알바가 당황 안 해요.</p>
+            <div class="tip"><b>AI가 도와드려요</b> · 빠뜨린 상황은 제가 질문으로 여쭤볼게요.</div>
+          </div>
+          <div class="step">
+            <div class="day">1주차 마무리</div>
+            <h4>혼자 서보기 + 점검</h4>
+            <p>짧게 혼자 근무 → 막힌 지점을 지침서에 보강. 이번 주 알바생이 자주 물은 질문 리포트 확인.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 시각 가이드 오버레이 -->
+  <div class="guide" id="guide">
+    <div class="guide-top">
+      <button class="gback" onclick="closeGuide()">‹ 채팅으로 돌아가기</button>
+    </div>
+    <h2>포스기 환불하기</h2>
+    <p class="gsub">손님을 기다리게 하지 마세요. 빨간 박스만 순서대로 누르면 돼요.</p>
+    <div class="gcallout"><span>👀</span><span><b>빨갛게 표시된 곳</b>을 누르면서 아래로 내려가면 끝나요.</span></div>
+
+    <!-- STEP 1 -->
+    <div class="gstep">
+      <div class="gstep-hd"><div class="gnum">1</div>
+        <div><div class="gt">바탕화면으로 나가기</div><div class="gloc">포스기 우측 하단</div></div></div>
+      <div class="simg">
+        <svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg">
+          <rect width="360" height="240" fill="#1C2530"/>
+          <rect x="12" y="12" width="210" height="216" rx="8" fill="#28323F"/>
+          <text x="24" y="34" fill="#8CA0B3" font-size="11">주문 내역</text>
+          <rect x="24" y="46" width="186" height="30" rx="5" fill="#33404F"/><text x="34" y="65" fill="#E8EDF2" font-size="11">아메리카노 (ICE)   4,500</text>
+          <rect x="24" y="82" width="186" height="30" rx="5" fill="#33404F"/><text x="34" y="101" fill="#E8EDF2" font-size="11">카페라떼          5,000</text>
+          <rect x="24" y="118" width="186" height="30" rx="5" fill="#33404F"/><text x="34" y="137" fill="#E8EDF2" font-size="11">치즈케이크        6,500</text>
+          <rect x="234" y="12" width="114" height="150" rx="8" fill="#28323F"/>
+          <g fill="#33404F">
+            <rect x="244" y="24" width="30" height="26" rx="4"/><rect x="279" y="24" width="30" height="26" rx="4"/><rect x="314" y="24" width="24" height="26" rx="4"/>
+            <rect x="244" y="56" width="30" height="26" rx="4"/><rect x="279" y="56" width="30" height="26" rx="4"/><rect x="314" y="56" width="24" height="26" rx="4"/>
+            <rect x="244" y="88" width="30" height="26" rx="4"/><rect x="279" y="88" width="30" height="26" rx="4"/><rect x="314" y="88" width="24" height="26" rx="4"/>
+          </g>
+          <rect x="244" y="120" width="94" height="30" rx="5" fill="#3E6B4F"/><text x="291" y="139" fill="#fff" font-size="11" text-anchor="middle">결제</text>
+          <rect x="234" y="172" width="114" height="56" rx="8" fill="#28323F"/>
+          <rect x="246" y="182" width="90" height="36" rx="7" fill="#4A5A6E"/><text x="291" y="204" fill="#E8EDF2" font-size="12" text-anchor="middle">⌂ 바탕화면</text>
+          <path d="M0 0 H360 V240 H0 Z M240 176 H342 V224 H240 Z" fill="#0A0F15" fill-opacity="0.55" fill-rule="evenodd"/>
+          <rect x="240" y="176" width="102" height="48" rx="9" fill="none" stroke="#E4322B" stroke-width="4"/>
+          <line x1="200" y1="140" x2="248" y2="188" stroke="#E4322B" stroke-width="5" stroke-linecap="round"/>
+          <path d="M248 188 L232 184 M248 188 L244 172" stroke="#E4322B" stroke-width="5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <div class="gcta"><span class="tap">☝</span><b>우측 하단 [바탕화면] 클릭</b></div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="gstep">
+      <div class="gstep-hd"><div class="gnum">2</div>
+        <div><div class="gt">[결제취소/환불] 열기</div><div class="gloc">바탕화면 중앙</div></div></div>
+      <div class="simg">
+        <svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg">
+          <rect width="360" height="240" fill="#141A22"/>
+          <text x="180" y="30" fill="#5E7186" font-size="11" text-anchor="middle">바탕화면</text>
+          <g font-size="10" text-anchor="middle">
+            <rect x="40" y="50" width="56" height="56" rx="12" fill="#2B3542"/><text x="68" y="118" fill="#8CA0B3">주문</text>
+            <rect x="152" y="50" width="56" height="56" rx="12" fill="#C9683D"/><text x="180" y="84" fill="#fff" font-size="20">↩</text><text x="180" y="118" fill="#E8B79E">결제취소</text>
+            <rect x="264" y="50" width="56" height="56" rx="12" fill="#2B3542"/><text x="292" y="118" fill="#8CA0B3">매출</text>
+            <rect x="40" y="140" width="56" height="56" rx="12" fill="#2B3542"/><text x="68" y="208" fill="#8CA0B3">재고</text>
+            <rect x="152" y="140" width="56" height="56" rx="12" fill="#2B3542"/><text x="180" y="208" fill="#8CA0B3">설정</text>
+            <rect x="264" y="140" width="56" height="56" rx="12" fill="#2B3542"/><text x="292" y="208" fill="#8CA0B3">고객</text>
+          </g>
+          <path d="M0 0 H360 V240 H0 Z M144 42 H216 V126 H144 Z" fill="#0A0F15" fill-opacity="0.58" fill-rule="evenodd"/>
+          <rect x="144" y="42" width="72" height="84" rx="14" fill="none" stroke="#E4322B" stroke-width="4"/>
+          <line x1="180" y1="176" x2="180" y2="134" stroke="#E4322B" stroke-width="5" stroke-linecap="round"/>
+          <path d="M180 134 L168 148 M180 134 L192 148" stroke="#E4322B" stroke-width="5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <div class="gcta"><span class="tap">☝</span><b>주황색 [결제취소] 클릭</b></div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="gstep">
+      <div class="gstep-hd"><div class="gnum">3</div>
+        <div><div class="gt">카드 꽂고 [취소 승인]</div><div class="gloc">환불 창 우측</div></div></div>
+      <div class="simg">
+        <svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg">
+          <rect width="360" height="240" fill="#1C2530"/>
+          <rect x="12" y="12" width="190" height="216" rx="8" fill="#28323F"/>
+          <text x="24" y="34" fill="#8CA0B3" font-size="11">취소할 결제</text>
+          <rect x="24" y="46" width="166" height="70" rx="6" fill="#33404F" stroke="#4A5A6E" stroke-width="1.5"/>
+          <text x="34" y="70" fill="#E8EDF2" font-size="12">영수증 #10427</text>
+          <text x="34" y="92" fill="#8CA0B3" font-size="11">합계 16,000원</text>
+          <text x="34" y="108" fill="#8CA0B3" font-size="10">카드 · 14:32</text>
+          <rect x="214" y="12" width="134" height="216" rx="8" fill="#28323F"/>
+          <text x="281" y="40" fill="#8CA0B3" font-size="11" text-anchor="middle">카드를 꽂아주세요</text>
+          <rect x="230" y="52" width="102" height="60" rx="8" fill="#20293440" stroke="#4A5A6E" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <text x="281" y="90" font-size="22" text-anchor="middle">💳</text>
+          <rect x="230" y="150" width="102" height="52" rx="9" fill="#E4322B"/><text x="281" y="182" fill="#fff" font-size="14" text-anchor="middle" font-weight="bold">취소 승인</text>
+          <path d="M0 0 H360 V240 H0 Z M222 142 H340 V210 H222 Z" fill="#0A0F15" fill-opacity="0.5" fill-rule="evenodd"/>
+          <rect x="226" y="146" width="110" height="60" rx="10" fill="none" stroke="#E4322B" stroke-width="4"/>
+          <line x1="150" y1="200" x2="216" y2="180" stroke="#E4322B" stroke-width="5" stroke-linecap="round"/>
+          <path d="M216 180 L200 178 M216 180 L206 192" stroke="#E4322B" stroke-width="5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <div class="gcta"><span class="tap">☝</span><b>카드 꽂고 [취소 승인] 클릭</b></div>
+    </div>
+
+    <div class="gdone">환불 완료 ✅<small>영수증이 나오면 손님께 전달하세요</small></div>
+  </div>
+</div>
+
+<script>
+  const drawer=document.getElementById('drawer');
+  const scrim=document.getElementById('scrim');
+  function openDrawer(){drawer.classList.add('on');scrim.classList.add('on')}
+  function closeDrawer(){drawer.classList.remove('on');scrim.classList.remove('on')}
+
+  function go(id,el){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+    document.getElementById(id).classList.add('on');
+    document.querySelectorAll('.navitem').forEach(n=>n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelector('.stage').scrollTop=0;
+    closeDrawer();
+  }
+
+  function setMode(mode,el){
+    document.querySelectorAll('.modebtn').forEach(b=>b.classList.remove('active'));
+    el.classList.add('active');
+    const ask=document.getElementById('thread-ask');
+    const teach=document.getElementById('thread-teach');
+    const composer=document.getElementById('composer');
+    const hint=document.getElementById('hint');
+    if(mode==='ask'){
+      ask.classList.add('on');teach.classList.remove('on');
+      composer.classList.remove('teach');
+      hint.textContent='알바생 모드예요 · 궁금한 걸 그냥 편하게 쓰면 돼요';
+    }else{
+      teach.classList.add('on');ask.classList.remove('on');
+      composer.classList.add('teach');
+      hint.textContent='사장님 모드예요 · 가게 방식을 알려주면 지침서에 정리돼요';
+    }
+    document.querySelector('.stage').scrollTop=99999;
+  }
+
+  function openGuide(){
+    const g=document.getElementById('guide');
+    g.classList.add('on');g.scrollTop=0;
+  }
+  function closeGuide(){document.getElementById('guide').classList.remove('on')}
+
+  function fakeSend(){
+    const i=document.getElementById('chatinput');
+    if(i.value.trim())i.value='';
+    // 프로토타입: 실제 응답 대신 입력만 비움 (데모용)
+  }
+</script>
+</body>
+</html>
